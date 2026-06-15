@@ -1,0 +1,11 @@
+Options -Indexes
+DirectoryIndex login.php index.php
+
+<Files "config.php">
+  Require all denied
+</Files>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^database/ - [F,L]
+</IfModule>

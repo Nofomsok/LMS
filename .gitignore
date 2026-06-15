@@ -1,0 +1,21 @@
+# Local/runtime files
+*.log
+*_cookies*.txt
+lms_*_cookie*.txt
+
+# Environment overrides
+.env
+.env.*
+
+# Runtime uploads are managed outside Git
+uploads/*
+!uploads/.gitkeep
+
+# Keep videos in Git for this demo
+# videos/*.mp4
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
