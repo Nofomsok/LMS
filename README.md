@@ -34,6 +34,20 @@ Admin:
 - Username: `admin`
 - Password: `demo12345`
 
+
+## Lesson Navigation and Progress Tracking
+
+Learners can move through the course using the lesson pathway, side navigation, and previous/next lesson buttons. The system is designed so learners can leave a lesson and return later without losing their place.
+
+When a learner watches a lesson video, the LMS saves the current playback position, total watched time, watched percentage, and completion state. If the learner comes back to the same lesson, the video can resume from the last saved position instead of starting from the beginning.
+
+Progress is shown in two useful ways:
+
+- Each lesson shows its own video watched percentage.
+- The Learner Profile shows the total watched percentage across all lesson videos.
+
+This makes the demo easy to explain to buyers: learners know where they are, admins can see engagement, and the course can prove how much of the training has actually been watched.
+
 ## Videos
 
 Videos are included in this Git project under `videos/`. Each of the 5 lessons is connected to one MP4 file in the local database.
