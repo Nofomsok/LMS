@@ -2664,3 +2664,95 @@ h3 {
 .complete-actions .btn {
   min-height: 48px;
 }
+/* Multiple private notes refinement */
+.private-note-panel {
+  width: 100%;
+  max-width: none;
+  gap: 12px;
+  padding: clamp(18px, 2.1vw, 26px);
+}
+
+.private-note-new-form textarea,
+.private-note-item textarea {
+  min-height: 82px;
+  width: 100%;
+}
+
+.private-note-new-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.private-note-new-form textarea {
+  grid-column: 1;
+}
+
+.private-note-new-form .btn {
+  grid-column: 2;
+  min-width: 160px;
+  margin-bottom: 0;
+}
+
+.private-note-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  border-top: 1px solid #dbe8ee;
+  padding-top: 14px;
+}
+
+.private-note-list h4 {
+  margin: 0;
+  color: #002A5C;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.private-note-item {
+  border: 1px solid #d8e8ee;
+  border-radius: 7px;
+  padding: 12px;
+  background: #f8fbfc;
+}
+
+.private-note-item form {
+  display: grid;
+  gap: 8px;
+}
+
+.private-note-meta {
+  color: #637486;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.private-note-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.private-note-actions .btn,
+.private-note-new-form .btn {
+  min-height: 38px;
+  padding: 9px 14px;
+  font-size: 13px;
+}
+
+.private-note-empty {
+  border: 1px dashed #c8d9e0;
+  border-radius: 6px;
+  padding: 12px;
+  background: #fbfdfe;
+}
+
+@media (max-width: 760px) {
+  .private-note-new-form {
+    grid-template-columns: 1fr;
+  }
+
+  .private-note-new-form textarea,
+  .private-note-new-form .btn {
+    grid-column: auto;
+  }
+}

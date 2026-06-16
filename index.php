@@ -278,28 +278,61 @@ function content_allowed_html($value)
 
 function private_note_block($module)
 {
-    $note = get_learner_note((int) $module['id']);
+    $notes = get_learner_notes((int) $module['id']);
     $status = isset($_GET['note']) ? (string) $_GET['note'] : '';
     $message = '';
     if ($status === 'saved') {
         $message = '<p class="note-status">Private note saved.</p>';
+    } elseif ($status === 'updated') {
+        $message = '<p class="note-status">Private note updated.</p>';
+    } elseif ($status === 'deleted') {
+        $message = '<p class="note-status">Private note deleted.</p>';
+    } elseif ($status === 'empty') {
+        $message = '<p class="note-status error">Write a note before saving.</p>';
     } elseif ($status === 'blocked' || $status === 'unavailable') {
         $message = '<p class="note-status error">Private note could not be saved.</p>';
+    }
+
+    $items = '';
+    foreach ($notes as $note) {
+        $items .= '
+                  <article class="private-note-item">
+                    <form method="post" action="lesson_note_save.php">
+                      <textarea name="note_text" rows="3" maxlength="5000">' . e((string) $note['note_text']) . '</textarea>
+                      <input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">
+                      <input type="hidden" name="module_id" value="' . e((string) $module['id']) . '">
+                      <input type="hidden" name="note_id" value="' . e((string) $note['id']) . '">
+                      <div class="private-note-meta">Updated ' . e((string) $note['updated_at']) . '</div>
+                      <div class="private-note-actions">
+                        <button class="btn secondary" type="submit" name="note_action" value="save">Update Note</button>
+                        <button class="btn secondary danger" type="submit" name="note_action" value="delete" onclick="return confirm(\'Delete this private note?\');">Delete</button>
+                      </div>
+                    </form>
+                  </article>';
+    }
+
+    if ($items === '') {
+        $items = '<p class="private-note-empty">No private notes saved for this lesson yet.</p>';
     }
 
     return '
               <section class="private-note-panel">
                 <div>
                   <h3>Private Lesson Notes</h3>
-                  <p>Only you can see these notes. Use them for reminders, action items, or questions to revisit later.</p>
+                  <p>Only you can see these notes. Add more than one note, then edit or delete each note below.</p>
                 </div>
                 ' . $message . '
-                <form method="post" action="lesson_note_save.php">
-                  <textarea name="note_text" rows="6" maxlength="5000" placeholder="Write your private notes for this lesson">' . e($note) . '</textarea>
+                <form class="private-note-new-form" method="post" action="lesson_note_save.php">
+                  <textarea name="note_text" rows="3" maxlength="5000" placeholder="Write a new private note for this lesson"></textarea>
                   <input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">
                   <input type="hidden" name="module_id" value="' . e((string) $module['id']) . '">
+                  <input type="hidden" name="note_action" value="save">
                   <button class="btn secondary" type="submit">Save Private Note</button>
                 </form>
+                <div class="private-note-list">
+                  <h4>Saved Private Notes</h4>
+                  ' . $items . '
+                </div>
               </section>';
 }
 function side_nav($modules, $activeSlug)

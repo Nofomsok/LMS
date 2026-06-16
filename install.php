@@ -170,8 +170,8 @@ try {
           note_text LONGTEXT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          UNIQUE KEY uniq_learner_note (course_user_id, module_id),
           INDEX idx_learner_notes_module (module_id),
+          INDEX idx_learner_notes_user_module (course_user_id, module_id),
           CONSTRAINT learner_notes_user_fk FOREIGN KEY (course_user_id) REFERENCES course_users(id) ON DELETE CASCADE,
           CONSTRAINT learner_notes_module_fk FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

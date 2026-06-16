@@ -9,6 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 require_course_user();
 
 $moduleId = (int) (isset($_POST['module_id']) ? $_POST['module_id'] : 0);
+$noteId = (int) (isset($_POST['note_id']) ? $_POST['note_id'] : 0);
+$action = isset($_POST['note_action']) ? (string) $_POST['note_action'] : 'save';
 $noteText = trim((string) (isset($_POST['note_text']) ? $_POST['note_text'] : ''));
 $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
 
@@ -21,8 +23,19 @@ if (!verify_csrf(is_string($token) ? $token : null) || !$module || strlen($noteT
     redirect($returnUrl . '&note=blocked');
 }
 
-if (!save_learner_note($moduleId, $noteText)) {
+if ($action === 'delete') {
+    if (!delete_learner_note($moduleId, $noteId)) {
+        redirect($returnUrl . '&note=unavailable');
+    }
+    redirect($returnUrl . '&note=deleted');
+}
+
+if ($noteText === '') {
+    redirect($returnUrl . '&note=empty');
+}
+
+if (!save_learner_note($moduleId, $noteText, $noteId)) {
     redirect($returnUrl . '&note=unavailable');
 }
 
-redirect($returnUrl . '&note=saved');
+redirect($returnUrl . ($noteId > 0 ? '&note=updated' : '&note=saved'));

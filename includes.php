@@ -605,31 +605,49 @@ function learner_notes_available()
     return $available;
 }
 
-function get_learner_note($moduleId)
+function get_learner_notes($moduleId)
 {
     $userId = current_course_user_id();
     if ($userId <= 0 || !learner_notes_available()) {
-        return '';
+        return array();
     }
 
-    $stmt = db()->prepare('SELECT note_text FROM learner_notes WHERE course_user_id = ? AND module_id = ? LIMIT 1');
+    $stmt = db()->prepare('SELECT id, note_text, created_at, updated_at FROM learner_notes WHERE course_user_id = ? AND module_id = ? ORDER BY updated_at DESC, id DESC');
     $stmt->execute([$userId, (int) $moduleId]);
-    $note = $stmt->fetchColumn();
 
-    return $note !== false ? (string) $note : '';
+    return $stmt->fetchAll();
 }
 
-function save_learner_note($moduleId, $noteText)
+function save_learner_note($moduleId, $noteText, $noteId = 0)
 {
     $userId = current_course_user_id();
     if ($userId <= 0 || !learner_notes_available()) {
         return false;
     }
 
-    $stmt = db()->prepare('INSERT INTO learner_notes (course_user_id, module_id, note_text) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE note_text = VALUES(note_text), updated_at = CURRENT_TIMESTAMP');
+    if ((int) $noteId > 0) {
+        $stmt = db()->prepare('UPDATE learner_notes SET note_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND course_user_id = ? AND module_id = ?');
+        $stmt->execute([(string) $noteText, (int) $noteId, $userId, (int) $moduleId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    $stmt = db()->prepare('INSERT INTO learner_notes (course_user_id, module_id, note_text) VALUES (?, ?, ?)');
     $stmt->execute([$userId, (int) $moduleId, (string) $noteText]);
 
     return true;
+}
+
+function delete_learner_note($moduleId, $noteId)
+{
+    $userId = current_course_user_id();
+    if ($userId <= 0 || !learner_notes_available() || (int) $noteId <= 0) {
+        return false;
+    }
+
+    $stmt = db()->prepare('DELETE FROM learner_notes WHERE id = ? AND course_user_id = ? AND module_id = ?');
+    $stmt->execute([(int) $noteId, $userId, (int) $moduleId]);
+
+    return $stmt->rowCount() > 0;
 }
 function video_progress_available()
 {
