@@ -161,6 +161,21 @@ try {
     ");
     install_log($messages, 'video progress table ready');
 
+    db()->exec("
+        CREATE TABLE IF NOT EXISTS course_feedback (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          course_user_id INT UNSIGNED NOT NULL,
+          rating TINYINT UNSIGNED NOT NULL,
+          feedback_text TEXT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uniq_course_feedback_user (course_user_id),
+          INDEX idx_course_feedback_rating (rating, updated_at),
+          CONSTRAINT course_feedback_user_fk FOREIGN KEY (course_user_id) REFERENCES course_users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    install_log($messages, 'course feedback table ready');
+
 
     db()->exec("
         CREATE TABLE IF NOT EXISTS learner_notes (
@@ -219,6 +234,15 @@ try {
                 $module[12],
             ]);
         }
+        db()->exec("UPDATE modules SET video_url = CASE slug
+          WHEN 'introduction' THEN ''
+          WHEN 'module-1' THEN 'videos/14146549_3840_2160_25fps.mp4'
+          WHEN 'module-2' THEN 'videos/14519250_3840_2160_25fps.mp4'
+          WHEN 'module-3' THEN 'videos/6339826-hd_1920_1080_30fps.mp4'
+          WHEN 'module-4' THEN 'videos/6804123-uhd_4096_2160_25fps.mp4'
+          WHEN 'module-5' THEN 'videos/9365268-hd_1920_1080_25fps.mp4'
+          ELSE video_url END
+          WHERE slug IN ('introduction', 'module-1', 'module-2', 'module-3', 'module-4', 'module-5')");
         install_log($messages, 'default lessons inserted');
     } else {
         install_log($messages, 'lessons already exist, seed skipped');

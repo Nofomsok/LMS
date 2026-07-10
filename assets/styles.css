@@ -372,13 +372,39 @@ a {
   border: 1px solid #d8ece9;
   border-radius: 7px;
   padding: 20px;
-  background: var(--mint);
+  background: #f6fbfa;
+  box-shadow: 0 12px 28px rgba(0, 42, 92, 0.07);
 }
 
 .profile-head {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.profile-identity {
+  min-width: 0;
+}
+
+.profile-label {
+  display: block;
+  margin-bottom: 3px;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.profile-status {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #075f56;
+  background: #dff8f3;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .profile-avatar {
@@ -477,6 +503,53 @@ a {
 
 .profile-details.compact {
   gap: 10px 16px;
+}
+
+.profile-detail-wide {
+  grid-column: 1 / -1;
+}
+
+.profile-section-title {
+  margin: 0;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #d8e7e6;
+  border-bottom: 1px solid #d8e7e6;
+  padding: 12px 0;
+}
+
+.profile-stats > div {
+  padding: 0 10px;
+  text-align: center;
+}
+
+.profile-stats > div + div {
+  border-left: 1px solid #d8e7e6;
+}
+
+.profile-stats strong,
+.profile-stats span {
+  display: block;
+}
+
+.profile-stats strong {
+  color: var(--navy);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.profile-stats span {
+  margin-top: 3px;
+  color: #526679;
+  font-size: 10px;
+  font-weight: 800;
 }
 .profile-actions {
   display: flex;
@@ -1322,6 +1395,149 @@ h3 {
 
 .resource-card div span {
   font-size: 14px;
+}
+
+.course-feedback-panel {
+  margin-top: 30px;
+  border-top: 2px solid #dbe8ee;
+  padding-top: 26px;
+}
+
+.feedback-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.course-feedback-panel h3 {
+  margin: 0 0 8px;
+  color: var(--navy);
+  font-size: 22px;
+}
+
+.course-feedback-panel > p {
+  margin: 0 0 16px;
+  color: #526679;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.course-feedback-form {
+  display: grid;
+  gap: 12px;
+}
+
+.course-feedback-form fieldset {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.course-feedback-form legend,
+.course-feedback-form > label {
+  margin-bottom: 6px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.course-feedback-form > label small {
+  color: #6a7886;
+  font-weight: 700;
+}
+
+.star-rating {
+  display: inline-flex;
+  flex-direction: row;
+  direction: rtl;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.star-rating input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.star-rating label {
+  color: #c7d2d9;
+  font-size: 34px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.star-rating input:checked ~ label,
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+  color: #e7a51c;
+}
+
+.star-rating input:focus-visible + label {
+  outline: 2px solid #0f766e;
+  outline-offset: 3px;
+}
+
+.star-rating label:hover {
+  transform: translateY(-1px);
+}
+
+.course-feedback-form textarea {
+  width: 100%;
+  border: 1px solid #b8cbd5;
+  border-radius: 6px;
+  padding: 11px;
+  color: var(--ink);
+  background: #fbfdfe;
+  resize: vertical;
+}
+
+.course-feedback-form .btn {
+  justify-self: start;
+}
+
+.feedback-message {
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #f1f7f8;
+  font-weight: 800;
+}
+
+.feedback-message.success {
+  color: #075f56 !important;
+  background: #ecfdf5;
+}
+
+.feedback-message.error {
+  color: #991b1b !important;
+  background: #fff1f2;
+}
+
+.admin-accent-feedback {
+  border-color: #ead8aa;
+  background: #fffdf7;
+}
+
+.admin-feedback-entry {
+  align-items: start;
+}
+
+.admin-feedback-stars {
+  display: block !important;
+  margin-top: 8px !important;
+  color: #c7d2d9 !important;
+  font-size: 20px !important;
+  letter-spacing: 0;
+}
+
+.admin-feedback-stars .filled {
+  display: inline !important;
+  color: #d99000 !important;
 }
 
 .download {

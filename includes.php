@@ -678,6 +678,69 @@ function current_course_user_id()
     return $id > 0 ? $id : 0;
 }
 
+function course_feedback_available()
+{
+    static $available = null;
+    if ($available !== null) {
+        return $available;
+    }
+
+    try {
+        $stmt = db()->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?');
+        $stmt->execute([DB_NAME, 'course_feedback']);
+        $available = (int) $stmt->fetchColumn() === 1;
+    } catch (Exception $exception) {
+        $available = false;
+    }
+
+    return $available;
+}
+
+function get_current_course_feedback()
+{
+    $userId = current_course_user_id();
+    if ($userId <= 0 || !course_feedback_available()) {
+        return null;
+    }
+
+    $stmt = db()->prepare('SELECT id, rating, feedback_text, created_at, updated_at FROM course_feedback WHERE course_user_id = ? LIMIT 1');
+    $stmt->execute([$userId]);
+    $feedback = $stmt->fetch();
+
+    return $feedback ?: null;
+}
+
+function get_admin_course_feedback()
+{
+    if (!course_feedback_available()) {
+        return array();
+    }
+
+    return db()->query('SELECT course_feedback.*, course_users.full_name, course_users.email, course_users.organization FROM course_feedback JOIN course_users ON course_users.id = course_feedback.course_user_id ORDER BY course_feedback.updated_at DESC, course_feedback.id DESC')->fetchAll();
+}
+
+function get_learner_activity_counts($userId)
+{
+    $counts = array('notes' => 0, 'feedback' => 0);
+    $userId = (int) $userId;
+    if ($userId <= 0) {
+        return $counts;
+    }
+
+    if (learner_notes_available()) {
+        $stmt = db()->prepare('SELECT COUNT(*) FROM learner_notes WHERE course_user_id = ?');
+        $stmt->execute([$userId]);
+        $counts['notes'] = (int) $stmt->fetchColumn();
+    }
+    if (course_feedback_available()) {
+        $stmt = db()->prepare('SELECT COUNT(*) FROM course_feedback WHERE course_user_id = ?');
+        $stmt->execute([$userId]);
+        $counts['feedback'] = (int) $stmt->fetchColumn();
+    }
+
+    return $counts;
+}
+
 function get_video_progress($moduleId)
 {
     $userId = current_course_user_id();

@@ -480,11 +480,16 @@ function profile_card($user, $modules, $videoProgressMap)
         return '';
     }
 
-    $organization = !empty($user['organization']) ? (string) $user['organization'] : 'Demo account';
+    $organization = !empty($user['organization']) ? (string) $user['organization'] : 'Not provided';
     $roleTitle = !empty($user['role_title']) ? (string) $user['role_title'] : 'Learner';
-    $lastLogin = !empty($user['last_login_at']) ? (string) $user['last_login_at'] : 'First session';
+    $phone = !empty($user['phone']) ? (string) $user['phone'] : 'Not provided';
+    $interests = !empty($user['interests']) ? (string) $user['interests'] : 'No learning interests added yet';
+    $lastLogin = !empty($user['last_login_at']) ? date('M j, Y, H:i', strtotime((string) $user['last_login_at'])) : 'First session';
+    $joinedDate = !empty($user['created_at']) ? date('M j, Y', strtotime((string) $user['created_at'])) : 'Not available';
+    $approvedDate = !empty($user['approved_at']) ? date('M j, Y', strtotime((string) $user['approved_at'])) : 'Not available';
     $passwordUrl = 'forgot_password.php?email=' . rawurlencode((string) $user['email']);
     $overallPercent = learner_video_total_percent($modules, $videoProgressMap);
+    $activityCounts = get_learner_activity_counts((int) $user['id']);
     $totalVideos = 0;
     $completedVideos = 0;
     $startedVideos = 0;
@@ -506,22 +511,32 @@ function profile_card($user, $modules, $videoProgressMap)
           <section class="profile-card" id="profile">
             <div class="profile-head">
               <span class="profile-avatar" aria-hidden="true">' . e(strtoupper(substr((string) $user['full_name'], 0, 1))) . '</span>
-              <div>
-                <h3>Learner Profile</h3>
-                <p>Demo learner dashboard</p>
+              <div class="profile-identity">
+                <span class="profile-label">Learner Profile</span>
+                <h3>' . e($user['full_name']) . '</h3>
+                <p>' . e($roleTitle) . ($organization !== 'Not provided' ? ' at ' . e($organization) : '') . '</p>
               </div>
+              <span class="profile-status">' . e(ucfirst((string) $user['status'])) . '</span>
             </div>
             <div class="profile-progress">
               <div><strong>' . e((string) $overallPercent) . '%</strong><span>Total videos watched</span><small>' . e((string) $completedVideos) . ' of ' . e((string) $totalVideos) . ' completed, ' . e((string) $startedVideos) . ' in progress</small></div>
               <div class="profile-progress-track" aria-hidden="true"><span style="width:' . e((string) $overallPercent) . '%"></span></div>
             </div>
+            <div class="profile-stats" aria-label="Learning activity">
+              <div><strong>' . e((string) $completedVideos) . '</strong><span>Videos completed</span></div>
+              <div><strong>' . e((string) $activityCounts['notes']) . '</strong><span>Private notes</span></div>
+              <div><strong>' . e((string) $activityCounts['feedback']) . '</strong><span>Course review</span></div>
+            </div>
+            <h4 class="profile-section-title">Account information</h4>
             <div class="profile-details compact">
-              <div><strong>Name</strong><span>' . e($user['full_name']) . '</span></div>
               <div><strong>Email</strong><span>' . e($user['email']) . '</span></div>
               <div><strong>Organization</strong><span>' . e($organization) . '</span></div>
               <div><strong>Role</strong><span>' . e($roleTitle) . '</span></div>
-              <div><strong>Status</strong><span>' . e(ucfirst((string) $user['status'])) . '</span></div>
+              <div><strong>Phone</strong><span>' . e($phone) . '</span></div>
+              <div><strong>Joined</strong><span>' . e($joinedDate) . '</span></div>
+              <div><strong>Approved</strong><span>' . e($approvedDate) . '</span></div>
               <div><strong>Last login</strong><span>' . e($lastLogin) . '</span></div>
+              <div class="profile-detail-wide"><strong>Learning interests</strong><span>' . e($interests) . '</span></div>
             </div>
             <div class="profile-actions">
               <a class="btn secondary" href="' . e($passwordUrl) . '">Edit Password</a>
@@ -573,7 +588,7 @@ function module_next_label($modules, $index, $next)
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/styles.css?v=20260514-no-lock-icon">
+    <link rel="stylesheet" href="assets/styles.css?v=20260710-profile-feedback">
   </head>
   <body>
     <div class="site-shell">
@@ -635,6 +650,8 @@ function module_next_label($modules, $index, $next)
           </div>
         </main>
       <?php elseif ($page === 'complete'): ?>
+        <?php $courseFeedback = get_current_course_feedback(); ?>
+        <?php $feedbackStatus = isset($_GET['feedback']) ? (string) $_GET['feedback'] : ''; ?>
         <main class="complete-grid complete-grid-tall">
           <section class="complete-panel">
             <div class="checkmark">OK</div>
@@ -670,6 +687,35 @@ function module_next_label($modules, $index, $next)
                 <span class="download">DL</span>
               </a>
             <?php endforeach; ?>
+            <section class="course-feedback-panel" id="course-feedback">
+              <span class="feedback-eyebrow">Course Review</span>
+              <h3>How was your experience?</h3>
+              <p>Choose a rating from 1 to 5 stars and share optional feedback about the course.</p>
+              <?php if ($feedbackStatus === 'saved'): ?>
+                <p class="feedback-message success">Thank you. Your course feedback has been saved.</p>
+              <?php elseif (in_array($feedbackStatus, ['blocked', 'unavailable', 'rating', 'long'], true)): ?>
+                <p class="feedback-message error">Feedback could not be saved. Please choose a rating and try again.</p>
+              <?php endif; ?>
+              <?php if (current_course_user_id() > 0 && course_feedback_available()): ?>
+                <form class="course-feedback-form" method="post" action="course_feedback_save.php">
+                  <fieldset>
+                    <legend>Your rating</legend>
+                    <div class="star-rating">
+                      <?php for ($rating = 5; $rating >= 1; $rating--): ?>
+                        <input type="radio" id="course-rating-<?= e((string) $rating) ?>" name="rating" value="<?= e((string) $rating) ?>" <?= $courseFeedback && (int) $courseFeedback['rating'] === $rating ? 'checked' : '' ?> required>
+                        <label for="course-rating-<?= e((string) $rating) ?>" aria-label="<?= e((string) $rating) ?> out of 5 stars" title="<?= e((string) $rating) ?> out of 5 stars">&#9733;</label>
+                      <?php endfor; ?>
+                    </div>
+                  </fieldset>
+                  <label for="course-feedback-text">Your feedback <small>Optional</small></label>
+                  <textarea id="course-feedback-text" name="feedback_text" rows="4" maxlength="2000" placeholder="What worked well, and what could be improved?"><?= e($courseFeedback ? (string) $courseFeedback['feedback_text'] : '') ?></textarea>
+                  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                  <button class="btn" type="submit"><?= $courseFeedback ? 'Update Feedback' : 'Submit Feedback' ?></button>
+                </form>
+              <?php else: ?>
+                <p class="feedback-message">Sign in as a learner to leave course feedback.</p>
+              <?php endif; ?>
+            </section>
           </section>
         </main>
       <?php elseif ($module): ?>

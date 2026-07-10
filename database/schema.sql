@@ -96,6 +96,18 @@ CREATE TABLE IF NOT EXISTS video_progress (
   CONSTRAINT video_progress_module_fk FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS course_feedback (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  course_user_id INT UNSIGNED NOT NULL,
+  rating TINYINT UNSIGNED NOT NULL,
+  feedback_text TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_course_feedback_user (course_user_id),
+  INDEX idx_course_feedback_rating (rating, updated_at),
+  CONSTRAINT course_feedback_user_fk FOREIGN KEY (course_user_id) REFERENCES course_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS site_settings (
   setting_key VARCHAR(120) NOT NULL PRIMARY KEY,
   setting_value LONGTEXT NULL,

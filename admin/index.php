@@ -316,6 +316,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             $message = 'Comment deleted.';
         }
+    } elseif ($action === 'delete_course_feedback') {
+        $id = (int) (isset($_POST['id']) ? $_POST['id'] : 0);
+        if ($id > 0 && course_feedback_available()) {
+            $stmt = db()->prepare('DELETE FROM course_feedback WHERE id = ?');
+            $stmt->execute([$id]);
+            $message = 'Course feedback deleted.';
+        }
     } elseif ($action === 'approve_reflection') {
         $id = (int) (isset($_POST['id']) ? $_POST['id'] : 0);
         if ($id > 0 && reflection_status_available()) {
@@ -458,6 +465,7 @@ $admins = get_admin_users();
 $courseUsers = get_course_users();
 $authorizedEmails = get_authorized_user_emails();
 $videoProgressRows = get_admin_video_progress_rows();
+$courseFeedbackRows = get_admin_course_feedback();
 $siteSettings = get_site_settings();
 
 $form = $editing ? $editing : array(
@@ -488,14 +496,14 @@ $form = $editing ? $editing : array(
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/styles.css?v=20260514-layout-profile">
+    <link rel="stylesheet" href="../assets/styles.css?v=20260710-profile-feedback">
   </head>
   <body>
     <main class="admin-shell">
       <header class="admin-header">
         <div>
           <h1>LMS DEMO Admin</h1>
-          <p>Manage lessons, videos, and submitted comments.</p>
+          <p>Manage lessons, learners, comments, course feedback, resources, and progress.</p>
         </div>
         <nav>
           <a class="btn secondary" href="../index.php">View Site</a>
@@ -714,6 +722,41 @@ $form = $editing ? $editing : array(
           <?php if ($reflectionEditing): ?><a class="btn secondary" href="index.php#reflection-editor">Cancel</a><?php endif; ?>
         </form>
       </section>
+
+      <details class="admin-card admin-accent-feedback admin-accordion" <?= $courseFeedbackRows ? 'open' : '' ?>>
+        <summary>
+          <span>
+            <strong>Course Feedback</strong>
+            <small>Review learner ratings and written feedback submitted after course completion.</small>
+          </span>
+          <span class="reflection-count"><?= e((string) count($courseFeedbackRows)) ?> <?= count($courseFeedbackRows) === 1 ? 'review' : 'reviews' ?></span>
+        </summary>
+        <div class="admin-list admin-accordion-body">
+          <?php if ($courseFeedbackRows): ?>
+            <?php foreach ($courseFeedbackRows as $feedback): ?>
+              <article class="admin-row admin-feedback-entry">
+                <div>
+                  <strong><?= e($feedback['full_name']) ?></strong>
+                  <span><?= e($feedback['email']) ?><?= !empty($feedback['organization']) ? ' | ' . e($feedback['organization']) : '' ?></span>
+                  <span class="admin-feedback-stars" aria-label="<?= e((string) $feedback['rating']) ?> out of 5 stars">
+                    <?php for ($star = 1; $star <= 5; $star++): ?><span class="<?= $star <= (int) $feedback['rating'] ? 'filled' : '' ?>">&#9733;</span><?php endfor; ?>
+                  </span>
+                  <?php if (!empty($feedback['feedback_text'])): ?><p><?= e($feedback['feedback_text']) ?></p><?php endif; ?>
+                  <span class="reflection-admin-date">Updated <?= e($feedback['updated_at']) ?></span>
+                </div>
+                <form method="post" onsubmit="return confirm('Delete this course feedback?');">
+                  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                  <input type="hidden" name="action" value="delete_course_feedback">
+                  <input type="hidden" name="id" value="<?= e((string) $feedback['id']) ?>">
+                  <button class="btn secondary danger" type="submit">Delete</button>
+                </form>
+              </article>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <p class="admin-empty">No course feedback has been submitted yet.</p>
+          <?php endif; ?>
+        </div>
+      </details>
 
       <details class="admin-card admin-accent-resources admin-accordion">
         <summary>
