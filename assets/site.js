@@ -24,15 +24,91 @@
     if (fill) {
       fill.style.width = `${rounded}%`;
     }
+    updateLiveCourseProgress(moduleId, rounded, completed);
+  }
+
+  function updateLiveCourseProgress(moduleId, percent, completed) {
+    const lesson = document.querySelector(`[data-module-status="${moduleId}"]`);
+    if (!lesson) {
+      return;
+    }
+
+    const isComplete = completed || percent >= 90;
+    const state = isComplete ? "completed" : (percent > 0 ? "in-progress" : "not-started");
+    const statusLabel = lesson.querySelector("[data-module-status-label]");
+    const number = lesson.querySelector(".side-number");
+    lesson.classList.remove("completed", "in-progress", "not-started");
+    lesson.classList.add(state);
+    lesson.dataset.progressPercent = String(percent);
+    if (statusLabel) {
+      statusLabel.textContent = isComplete ? "Completed" : (percent > 0 ? `${percent}% watched` : "Not started");
+    }
+    if (number) {
+      number.textContent = isComplete ? "OK" : (lesson.dataset.moduleIcon || "");
+    }
+
+    const trackedLessons = Array.from(document.querySelectorAll('[data-module-status][data-has-video="1"]'));
+    if (!trackedLessons.length) {
+      return;
+    }
+    const total = trackedLessons.reduce((sum, item) => sum + Number(item.dataset.progressPercent || 0), 0);
+    const overall = Math.round(total / trackedLessons.length);
+    const overallLabel = document.querySelector("[data-course-progress-label]");
+    const overallFill = document.querySelector("[data-course-progress-fill]");
+    if (overallLabel) {
+      overallLabel.textContent = `${overall}% overall video progress`;
+    }
+    if (overallFill) {
+      overallFill.style.width = `${overall}%`;
+    }
+  }
+
+  function setSaveState(moduleId, message, state) {
+    const status = document.querySelector(`[data-video-save-state="${moduleId}"]`);
+    if (!status) {
+      return;
+    }
+    status.textContent = message;
+    status.dataset.state = state || "";
   }
 
   function storageKey(moduleId) {
+    return `lms-demo-video-progress-${moduleId}`;
+  }
+
+  function legacyStorageKey(moduleId) {
     return `sic-video-progress-${moduleId}`;
+  }
+
+  function clearRetakeLocalProgress() {
+    const isRetake = new URLSearchParams(window.location.search).get("retake") === "started";
+    if (!isRetake) {
+      return;
+    }
+
+    try {
+      for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+        const key = window.localStorage.key(index) || "";
+        if (key.startsWith("lms-demo-video-progress-") || key.startsWith("sic-video-progress-")) {
+          window.localStorage.removeItem(key);
+        }
+      }
+    } catch (error) {
+      // The server-side reset still applies when browser storage is unavailable.
+    }
   }
 
   function readLocalProgress(moduleId) {
     try {
-      const raw = window.localStorage.getItem(storageKey(moduleId));
+      const key = storageKey(moduleId);
+      let raw = window.localStorage.getItem(key);
+      if (!raw) {
+        raw = window.localStorage.getItem(legacyStorageKey(moduleId));
+        if (raw) {
+          window.localStorage.setItem(key, raw);
+          window.localStorage.removeItem(legacyStorageKey(moduleId));
+        }
+      }
       return raw ? JSON.parse(raw) : null;
     } catch (error) {
       return null;
@@ -112,6 +188,7 @@
 
     setProgress(payload.moduleId, payload.percent, payload.completed);
     writeLocalProgress(payload);
+    setSaveState(payload.moduleId, "Saving progress...", "saving");
 
     if (immediate && navigator.sendBeacon) {
       const body = encodedProgressBody(payload);
@@ -120,6 +197,7 @@
         new Blob([body], { type: "application/x-www-form-urlencoded" })
       );
       if (sent) {
+        setSaveState(payload.moduleId, "Progress saved", "saved");
         return Promise.resolve();
       }
     }
@@ -137,7 +215,14 @@
       body: form,
       credentials: "same-origin",
       keepalive: !!immediate
-    }).catch(() => {});
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error("Progress save failed");
+      }
+      setSaveState(payload.moduleId, "Progress saved", "saved");
+    }).catch(() => {
+      setSaveState(payload.moduleId, "Progress not saved - retrying", "error");
+    });
   }
 
   function startSaving(element, player) {
@@ -271,7 +356,78 @@
     });
   }
 
+  function initNoteCounters() {
+    document.querySelectorAll("[data-note-textarea]").forEach(textarea => {
+      const form = textarea.closest("form");
+      const counter = form ? form.querySelector("[data-note-count]") : null;
+      if (!counter) {
+        return;
+      }
+
+      const update = () => {
+        const maximum = parseInt(textarea.getAttribute("maxlength") || "5000", 10);
+        counter.textContent = `${textarea.value.length} / ${maximum}`;
+      };
+
+      textarea.addEventListener("input", update);
+      update();
+    });
+  }
+
+  function initNoteDrafts() {
+    const noteSaved = new URLSearchParams(window.location.search).get("note") === "saved";
+    document.querySelectorAll("[data-note-draft-form]").forEach(form => {
+      const textarea = form.querySelector("[data-note-draft-textarea]");
+      const status = form.querySelector("[data-note-draft-status]");
+      const key = form.dataset.noteDraftKey;
+      if (!textarea || !status || !key) {
+        return;
+      }
+
+      try {
+        if (noteSaved) {
+          window.localStorage.removeItem(key);
+        } else {
+          const savedDraft = window.localStorage.getItem(key);
+          if (savedDraft && textarea.value === "") {
+            textarea.value = savedDraft;
+            textarea.dispatchEvent(new Event("input"));
+            status.textContent = "Unsaved draft restored";
+            status.dataset.state = "restored";
+          }
+        }
+      } catch (error) {
+        status.textContent = "Draft storage is unavailable";
+        status.dataset.state = "error";
+      }
+
+      let saveTimer = null;
+      textarea.addEventListener("input", () => {
+        window.clearTimeout(saveTimer);
+        status.textContent = textarea.value ? "Saving draft..." : "Drafts are saved on this device";
+        status.dataset.state = textarea.value ? "saving" : "";
+        saveTimer = window.setTimeout(() => {
+          try {
+            if (textarea.value) {
+              window.localStorage.setItem(key, textarea.value);
+              status.textContent = "Draft saved on this device";
+              status.dataset.state = "saved";
+            } else {
+              window.localStorage.removeItem(key);
+            }
+          } catch (error) {
+            status.textContent = "Draft could not be saved";
+            status.dataset.state = "error";
+          }
+        }, 350);
+      });
+    });
+  }
+
+  clearRetakeLocalProgress();
   initHtml5Videos();
+  initNoteCounters();
+  initNoteDrafts();
 
   if (youtubeFrames().length > 0) {
     const script = document.createElement("script");

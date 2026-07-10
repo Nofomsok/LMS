@@ -7,10 +7,20 @@ LMS DEMO is a local PHP/MySQL learning management system demo. It includes learn
 - Introduction plus 5 lessons
 - Local MP4 lesson videos in `videos/`
 - Learner profile with total video progress
-- Private notes per learner and lesson
+- Multiple private notes per learner and lesson, with local draft recovery
 - Public lesson comments managed from admin
 - Admin CMS for lessons, images, text content, users, resources, comments, and progress
 - Completion page with Retake Course option
+
+## Latest Learner Experience Update
+
+The learner journey now gives clearer feedback from the course overview through completion. The overview chooses the correct Start, Resume, Continue, or View Completion action from saved progress. Lesson cards and sidebar links show whether each video is not started, in progress, or completed, while the learner profile summarizes overall progress and completed videos.
+
+Video playback is remembered automatically. Progress and the sidebar update while the learner watches, a visible status confirms when progress is being saved, and returning to a lesson resumes near the previous playback position. Retake Course clears both server and browser progress so the course genuinely restarts from the beginning.
+
+Private lesson notes support multiple entries, editing, and deletion. New note drafts are also saved on the learner's current device and restored after navigation until the note is submitted. Draft and character-count feedback helps prevent accidental loss while writing.
+
+The Introduction uses its configured image, and the five included MP4 files are mapped to Lessons 1-5 in the database seed. These improvements preserve the existing CMS, public comments, resources, lesson navigation, and reporting behavior.
 
 ## Local Setup With Laragon
 

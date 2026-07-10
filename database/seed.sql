@@ -15,4 +15,15 @@ VALUES
 ('Admin Feature Summary', '#', 'admin-feature-summary.pdf', 'pdf', 30),
 ('Launch Readiness Worksheet', '#', 'launch-readiness-worksheet.pdf', 'pdf', 40);
 
+UPDATE modules SET video_url = CASE slug
+  WHEN 'introduction' THEN ''
+  WHEN 'module-1' THEN 'videos/14146549_3840_2160_25fps.mp4'
+  WHEN 'module-2' THEN 'videos/14519250_3840_2160_25fps.mp4'
+  WHEN 'module-3' THEN 'videos/6339826-hd_1920_1080_30fps.mp4'
+  WHEN 'module-4' THEN 'videos/6804123-uhd_4096_2160_25fps.mp4'
+  WHEN 'module-5' THEN 'videos/9365268-hd_1920_1080_25fps.mp4'
+  ELSE video_url
+END
+WHERE slug IN ('introduction', 'module-1', 'module-2', 'module-3', 'module-4', 'module-5');
+
 

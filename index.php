@@ -182,6 +182,7 @@ function video_progress_summary($module, $progress = null)
                     <span data-video-progress-label="' . e((string) $module['id']) . '">' . e((string) $percent) . '% watched' . ($completed ? ' - completed' : '') . '</span>
                   </div>
                   <div class="video-progress-track" aria-hidden="true"><span data-video-progress-fill="' . e((string) $module['id']) . '" style="width:' . e((string) $percent) . '%"></span></div>
+                  <small class="video-save-state" data-video-save-state="' . e((string) $module['id']) . '" aria-live="polite">Progress saves automatically</small>
                 </div>';
 }
 
@@ -298,11 +299,11 @@ function private_note_block($module)
         $items .= '
                   <article class="private-note-item">
                     <form method="post" action="lesson_note_save.php">
-                      <textarea name="note_text" rows="3" maxlength="5000">' . e((string) $note['note_text']) . '</textarea>
+                      <textarea name="note_text" rows="3" maxlength="5000" data-note-textarea>' . e((string) $note['note_text']) . '</textarea>
                       <input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">
                       <input type="hidden" name="module_id" value="' . e((string) $module['id']) . '">
                       <input type="hidden" name="note_id" value="' . e((string) $note['id']) . '">
-                      <div class="private-note-meta">Updated ' . e((string) $note['updated_at']) . '</div>
+                      <div class="private-note-meta"><span>Updated ' . e((string) $note['updated_at']) . '</span><span data-note-count></span></div>
                       <div class="private-note-actions">
                         <button class="btn secondary" type="submit" name="note_action" value="save">Update Note</button>
                         <button class="btn secondary danger" type="submit" name="note_action" value="delete" onclick="return confirm(\'Delete this private note?\');">Delete</button>
@@ -322,8 +323,9 @@ function private_note_block($module)
                   <p>Only you can see these notes. Add more than one note, then edit or delete each note below.</p>
                 </div>
                 ' . $message . '
-                <form class="private-note-new-form" method="post" action="lesson_note_save.php">
-                  <textarea name="note_text" rows="3" maxlength="5000" placeholder="Write a new private note for this lesson"></textarea>
+                <form class="private-note-new-form" method="post" action="lesson_note_save.php" data-note-draft-form data-note-draft-key="lms-demo-note-draft-' . e((string) current_course_user_id()) . '-' . e((string) $module['id']) . '">
+                  <textarea name="note_text" rows="3" maxlength="5000" placeholder="Write a new private note for this lesson" data-note-textarea data-note-draft-textarea></textarea>
+                  <div class="private-note-draft-meta"><span class="private-note-draft-status" data-note-draft-status aria-live="polite">Drafts are saved on this device</span><span class="private-note-count" data-note-count>0 / 5000</span></div>
                   <input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">
                   <input type="hidden" name="module_id" value="' . e((string) $module['id']) . '">
                   <input type="hidden" name="note_action" value="save">
@@ -335,24 +337,28 @@ function private_note_block($module)
                 </div>
               </section>';
 }
-function side_nav($modules, $activeSlug)
+function side_nav($modules, $activeSlug, $videoProgressMap)
 {
     $total = count(training_modules($modules));
-    $activeIndex = max(1, training_module_number($modules, $activeSlug));
     $html = '<aside class="side-nav"><h3>Course Lessons</h3>';
     foreach ($modules as $index => $module) {
+        $progress = isset($videoProgressMap[(int) $module['id']]) ? $videoProgressMap[(int) $module['id']] : null;
+        $state = progress_state($progress);
+        $progressPercent = $progress && isset($progress['percent_watched']) ? min(100, max(0, (float) $progress['percent_watched'])) : 0;
+        $hasVideo = !empty($module['video_url']);
         if (is_intro_module($module)) {
-            $icon = '+';
+            $icon = 'i';
             $label = 'Introduction';
         } else {
             $icon = (string) training_module_number($modules, $module['slug']);
             $label = $module['title'];
         }
         $active = $module['slug'] === $activeSlug ? ' active' : '';
-        $html .= '<a class="side-link' . $active . '" href="' . e(page_url($module['slug'])) . '"><span class="side-number">' . e($icon) . '</span><span>' . e($label) . '</span></a>';
+        $html .= '<a class="side-link ' . e($state) . $active . '" href="' . e(page_url($module['slug'])) . '" data-module-status="' . e((string) $module['id']) . '" data-progress-percent="' . e((string) $progressPercent) . '" data-has-video="' . ($hasVideo ? '1' : '0') . '" data-module-icon="' . e($icon) . '"><span class="side-number">' . e($state === 'completed' ? 'OK' : $icon) . '</span><span class="side-copy"><span>' . e($label) . '</span><small data-module-status-label>' . e(progress_status_label($progress)) . '</small></span></a>';
     }
-    $percent = $total > 0 ? min(100, max(1, ($activeIndex / $total) * 100)) : 0;
-    $html .= '<div class="progress-box">You are on Lesson ' . e((string) $activeIndex) . ' of ' . e((string) $total) . '<div class="progress-track"><div class="progress-fill" style="width:' . e((string) $percent) . '%"></div></div></div></aside>';
+    $percent = learner_video_total_percent($modules, $videoProgressMap);
+    $position = $activeSlug === 'introduction' ? 'Introduction' : 'Lesson ' . training_module_number($modules, $activeSlug) . ' of ' . $total;
+    $html .= '<div class="progress-box" data-course-progress><span>' . e($position) . '</span><strong data-course-progress-label>' . e((string) $percent) . '% overall video progress</strong><div class="progress-track"><div class="progress-fill" data-course-progress-fill style="width:' . e((string) $percent) . '%"></div></div></div></aside>';
 
     return $html;
 }
@@ -397,6 +403,77 @@ function learner_video_total_percent($modules, $videoProgressMap)
     return $total > 0 ? (int) round($sum / $total) : 0;
 }
 
+function progress_state($progress)
+{
+    $percent = $progress && isset($progress['percent_watched']) ? (float) $progress['percent_watched'] : 0;
+    if (($progress && !empty($progress['is_completed'])) || $percent >= 90) {
+        return 'completed';
+    }
+
+    return $percent > 0 ? 'in-progress' : 'not-started';
+}
+
+function progress_status_label($progress)
+{
+    $state = progress_state($progress);
+    if ($state === 'completed') {
+        return 'Completed';
+    }
+    if ($state === 'in-progress') {
+        return progress_percent_label($progress) . ' watched';
+    }
+
+    return 'Not started';
+}
+
+function course_resume_details($modules, $videoProgressMap)
+{
+    $latestModule = null;
+    $latestTimestamp = 0;
+    $hasProgress = false;
+
+    foreach ($modules as $module) {
+        $progress = isset($videoProgressMap[(int) $module['id']]) ? $videoProgressMap[(int) $module['id']] : null;
+        $percent = $progress && isset($progress['percent_watched']) ? (float) $progress['percent_watched'] : 0;
+        $current = $progress && isset($progress['current_seconds']) ? (int) $progress['current_seconds'] : 0;
+        if ($percent <= 0 && $current <= 0) {
+            continue;
+        }
+
+        $hasProgress = true;
+        if (progress_state($progress) !== 'in-progress') {
+            continue;
+        }
+
+        $timestamp = !empty($progress['updated_at']) ? strtotime((string) $progress['updated_at']) : 0;
+        if ($latestModule === null || $timestamp >= $latestTimestamp) {
+            $latestModule = $module;
+            $latestTimestamp = $timestamp;
+        }
+    }
+
+    if ($latestModule !== null) {
+        $name = is_intro_module($latestModule) ? 'Introduction' : $latestModule['module_type'];
+        return array('page' => $latestModule['slug'], 'label' => 'Resume ' . $name);
+    }
+
+    if ($hasProgress) {
+        foreach ($modules as $module) {
+            if (is_intro_module($module)) {
+                continue;
+            }
+            $progress = isset($videoProgressMap[(int) $module['id']]) ? $videoProgressMap[(int) $module['id']] : null;
+            if (progress_state($progress) !== 'completed') {
+                return array('page' => $module['slug'], 'label' => 'Continue to ' . $module['module_type']);
+            }
+        }
+
+        return array('page' => 'complete', 'label' => 'View Completion');
+    }
+
+    return array('page' => 'introduction', 'label' => 'Start with Introduction');
+}
+
 function profile_card($user, $modules, $videoProgressMap)
 {
     if (!$user || (int) $user['id'] <= 0) {
@@ -408,6 +485,22 @@ function profile_card($user, $modules, $videoProgressMap)
     $lastLogin = !empty($user['last_login_at']) ? (string) $user['last_login_at'] : 'First session';
     $passwordUrl = 'forgot_password.php?email=' . rawurlencode((string) $user['email']);
     $overallPercent = learner_video_total_percent($modules, $videoProgressMap);
+    $totalVideos = 0;
+    $completedVideos = 0;
+    $startedVideos = 0;
+    foreach ($modules as $module) {
+        if (empty($module['video_url'])) {
+            continue;
+        }
+        $totalVideos++;
+        $progress = isset($videoProgressMap[(int) $module['id']]) ? $videoProgressMap[(int) $module['id']] : null;
+        $state = progress_state($progress);
+        if ($state === 'completed') {
+            $completedVideos++;
+        } elseif ($state === 'in-progress') {
+            $startedVideos++;
+        }
+    }
 
     return '
           <section class="profile-card" id="profile">
@@ -419,7 +512,7 @@ function profile_card($user, $modules, $videoProgressMap)
               </div>
             </div>
             <div class="profile-progress">
-              <div><strong>' . e((string) $overallPercent) . '%</strong><span>Total videos watched</span></div>
+              <div><strong>' . e((string) $overallPercent) . '%</strong><span>Total videos watched</span><small>' . e((string) $completedVideos) . ' of ' . e((string) $totalVideos) . ' completed, ' . e((string) $startedVideos) . ' in progress</small></div>
               <div class="profile-progress-track" aria-hidden="true"><span style="width:' . e((string) $overallPercent) . '%"></span></div>
             </div>
             <div class="profile-details compact">
@@ -500,6 +593,7 @@ function module_next_label($modules, $index, $next)
           <div class="value-item"><?= value_icon('care') ?><div><strong>Compassionate Care</strong><span>That Matters</span></div></div>
         </section>
       <?php elseif ($page === 'overview'): ?>
+        <?php $resumeDetails = course_resume_details($modules, $videoProgressMap); ?>
         <?= topbar_markup(false, $modules, $page) ?>
         <main class="content overview-grid">
           <div class="welcome-profile-row">
@@ -513,11 +607,11 @@ function module_next_label($modules, $index, $next)
             <h3><?= e($siteSettings['pathway_title']) ?></h3>
             <div class="pathway">
               <?php foreach ($modules as $item): ?>
-                <a class="path-step" href="<?= e(page_url($item['slug'])) ?>">
+                <?php $pathProgress = isset($videoProgressMap[(int) $item['id']]) ? $videoProgressMap[(int) $item['id']] : null; ?>
+                <a class="path-step <?= e(progress_state($pathProgress)) ?>" href="<?= e(page_url($item['slug'])) ?>">
                   <span class="path-badge"><?= path_badge($item, $modules) ?></span>
                   <span><?= e($item['title']) ?></span>
-                  <?php $pathProgress = isset($videoProgressMap[(int) $item['id']]) ? $videoProgressMap[(int) $item['id']] : null; ?>
-                  <small class="path-progress"><?= e(progress_percent_label($pathProgress)) ?> watched</small>
+                  <small class="path-progress"><?= e(progress_status_label($pathProgress)) ?></small>
                 </a>
               <?php endforeach; ?>
             </div>
@@ -537,7 +631,7 @@ function module_next_label($modules, $index, $next)
             </div>
           </div>
           <div class="overview-actions">
-            <a class="btn overview-start" href="<?= e(page_url('introduction')) ?>">Start with Introduction &rarr;</a>
+            <a class="btn overview-start" href="<?= e(page_url($resumeDetails['page'])) ?>"><?= e($resumeDetails['label']) ?> &rarr;</a>
           </div>
         </main>
       <?php elseif ($page === 'complete'): ?>
@@ -584,7 +678,7 @@ function module_next_label($modules, $index, $next)
         <?= topbar_markup(true, $modules, $module['slug']) ?>
         <?php if ($module['slug'] === 'introduction'): ?>
           <main class="content training-layout">
-            <?= side_nav($modules, $module['slug']) ?>
+            <?= side_nav($modules, $module['slug'], $videoProgressMap) ?>
             <section class="module-main">
               <p class="eyebrow">Introduction</p>
               <div class="module-grid">
@@ -609,7 +703,7 @@ function module_next_label($modules, $index, $next)
       <?php else: ?>
           <?php $moduleReflections = get_module_reflections($module['id']); ?>
           <main class="content training-layout">
-            <?= side_nav($modules, $module['slug']) ?>
+            <?= side_nav($modules, $module['slug'], $videoProgressMap) ?>
             <section class="module-main">
               <p class="eyebrow"><?= e($module['module_type']) ?></p>
               <h2><?= e($module['title']) ?></h2>
@@ -666,7 +760,7 @@ function module_next_label($modules, $index, $next)
         <?php endif; ?>
       <?php endif; ?>
     </div>
-    <script src="assets/site.js?v=20260514-mp4-local-resume"></script>
+    <script src="assets/site.js?v=20260710-live-progress-drafts"></script>
   </body>
 </html>
 
