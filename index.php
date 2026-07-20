@@ -103,7 +103,7 @@ function topbar_markup($training, $modules, $page)
 
     if (is_course_user()) {
         $profile = current_course_user();
-        $profileLink = $profile && (int) $profile['id'] > 0 ? '<a class="profile-link" href="' . e(page_url('overview')) . '#profile">Profile</a>' : '';
+        $profileLink = $profile && (int) $profile['id'] !== 0 ? '<a class="profile-link" href="' . e(page_url('overview')) . '#profile">Profile</a>' : '';
         $account = $profileLink . '<a class="account-link" href="logout.php">Sign Out</a>';
     } else {
         $account = '<a class="account-link" href="login.php">Sign In</a>';
@@ -476,18 +476,20 @@ function course_resume_details($modules, $videoProgressMap)
 
 function profile_card($user, $modules, $videoProgressMap)
 {
-    if (!$user || (int) $user['id'] <= 0) {
+    if (!$user || (int) $user['id'] === 0) {
         return '';
     }
 
-    $organization = !empty($user['organization']) ? (string) $user['organization'] : 'Not provided';
-    $roleTitle = !empty($user['role_title']) ? (string) $user['role_title'] : 'Learner';
+    $isAdminPreview = (int) $user['id'] === -1;
+    $organization = !empty($user['organization']) ? (string) $user['organization'] : ($isAdminPreview ? 'LMS DEMO' : 'Not provided');
+    $roleTitle = !empty($user['role_title']) ? (string) $user['role_title'] : ($isAdminPreview ? 'Administrator' : 'Learner');
     $phone = !empty($user['phone']) ? (string) $user['phone'] : 'Not provided';
-    $interests = !empty($user['interests']) ? (string) $user['interests'] : 'No learning interests added yet';
+    $interests = !empty($user['interests']) ? (string) $user['interests'] : ($isAdminPreview ? 'Course administration and learner experience preview' : 'No learning interests added yet');
     $lastLogin = !empty($user['last_login_at']) ? date('M j, Y, H:i', strtotime((string) $user['last_login_at'])) : 'First session';
     $joinedDate = !empty($user['created_at']) ? date('M j, Y', strtotime((string) $user['created_at'])) : 'Not available';
     $approvedDate = !empty($user['approved_at']) ? date('M j, Y', strtotime((string) $user['approved_at'])) : 'Not available';
     $passwordUrl = 'forgot_password.php?email=' . rawurlencode((string) $user['email']);
+    $passwordAction = $isAdminPreview ? '' : '<div class="profile-actions"><a class="btn secondary" href="' . e($passwordUrl) . '">Edit Password</a></div>';
     $overallPercent = learner_video_total_percent($modules, $videoProgressMap);
     $activityCounts = get_learner_activity_counts((int) $user['id']);
     $totalVideos = 0;
@@ -538,9 +540,7 @@ function profile_card($user, $modules, $videoProgressMap)
               <div><strong>Last login</strong><span>' . e($lastLogin) . '</span></div>
               <div class="profile-detail-wide"><strong>Learning interests</strong><span>' . e($interests) . '</span></div>
             </div>
-            <div class="profile-actions">
-              <a class="btn secondary" href="' . e($passwordUrl) . '">Edit Password</a>
-            </div>
+            ' . $passwordAction . '
           </section>';
 }
 
